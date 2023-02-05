@@ -1,0 +1,93 @@
+---
+title: "Oppgave_1"
+format: pdf
+editor: visual
+---
+
+```{r}
+library(tidyverse) #installing packages
+library(lubridate)
+```
+
+```{r, warning=FALSE}
+library(readr)
+df_lower <- read_table("http://vortex.nsstc.uah.edu/data/msu/v6.0/tlt/uahncdc_lt_6.0.txt", 
+    col_types = cols(Year = col_character(), 
+        Globe = col_number()))
+
+
+
+df_mid <- read_table("http://vortex.nsstc.uah.edu/data/msu/v6.0/tmt/uahncdc_mt_6.0.txt", 
+    col_types = cols(Year = col_character(), 
+        Globe = col_number()))
+
+
+
+df_trop <- read_table("http://vortex.nsstc.uah.edu/data/msu/v6.0/ttp/uahncdc_tp_6.0.txt", 
+    col_types = cols(Year = col_character(), 
+        Globe = col_number()))
+
+
+
+df_lower_s <- read_table("http://vortex.nsstc.uah.edu/data/msu/v6.0/tls/uahncdc_ls_6.0.txt", 
+    col_types = cols(Year = col_character(), 
+        Globe = col_number()))
+#getting the data with readr, then changing Year to character and Globe to numeric
+```
+
+```{r}
+df_lower <- df_lower %>%
+  select(Globe) %>%
+  rename(Globe_lower = Globe)
+df_mid <- df_mid %>%
+  select(Globe) %>%
+  rename(Globe_mid = Globe)
+df_trop <- df_trop %>%
+  select(Globe, Year, Mo) %>%
+  rename(Globe_trop = Globe)
+df_lower_s <- df_lower_s %>%
+  select(Globe) %>%
+  rename(Globe_lower_s = Globe)
+#Using the select function to pick out the variables we need for the plot, then using the rename function to get a more suitable name for the Globe variable
+
+```
+
+```{r, warning=False}
+df_total <- cbind(df_lower, df_mid, df_trop, df_lower_s) #Using the cbind function to combine all the dataframes into a single dataframe
+
+df_total <- df_total %>% 
+  mutate(Date = ymd(paste(df_total$Year, df_total$Mo,1 , sep="-"))) 
+#Mutate function to create a Date variable, with the Year and month
+```
+
+```{r}
+df_total <- df_total[1:516,] #removing unnecessary data from the dataframe
+df_total <- df_total %>%
+  filter(Year > 1979) %>% #Filter to get the Years we need for the plot
+  mutate(roll_lower = zoo::rollmean(Globe_lower, 12, fill=NA, align = "right")) %>% 
+  mutate(roll_mid = zoo::rollmean(Globe_mid, 12, fill=NA, align = "right")) %>%
+  mutate(roll_trop = zoo::rollmean(Globe_trop, 12, fill = NA, align = "right")) %>%
+  mutate(roll_lower_s = zoo::rollmean(Globe_lower_s, 12 , fill=NA, align = "right")) %>% #creating the 12 month moving average with the rollmean function for each of the locations. then aligning them to the right of the dataframe
+  mutate(Average = (roll_lower + roll_trop + roll_lower_s + roll_mid) /4)
+  #Creating the Average variable by adding the moving averages together then dividing by 4
+
+
+```
+
+![](data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAaCAYAAADFTB7LAAAAa0lEQVR42u3OywnAIBBAwcXSUoCW5D11xDoNCBGNv0MOecJOBSOi1OZMsJ4dvFxEJ1OQnMxBarIKEpNNkJbsBknJYZCSnAYJyVVQziNig7/nZkFEbhTE5HpBVO4dxOXKIDL3BLG5BJ1T6rsbMfep2CaMN00AAAAASUVORK5CYII= "Run Current Chunk")
+
+```{r, warning=FALSE}
+df_total %>%
+  ggplot(aes(x = Date)) + #Using the Date variable along the x-axis
+  geom_line(aes(y = roll_lower_s, color = "Lower stratosphere")) +
+  geom_line(aes(y = roll_lower, color = "Lower Troposphere")) +
+  geom_line(aes(y = roll_trop, color = " Tropopause")) +
+    geom_line(aes(y = roll_mid, color = "Mid Troposphere")) + #Plotting each of the locations with geom_line and using color to get a more suitable name in plot
+  geom_line(aes(y = Average, color = "Average"), size=0.8) + # plotting the average, then using size to make it more visable
+  ylab("Temperature") +
+  xlab("Year") + # adding axis labels to the plot
+  theme_bw() + #adding a nice theme
+  labs(colour = "Locations") + # Giving the legend a more suitable name
+  ggtitle("World average temperature 1980-2022") # Adding a title to plot
+  
+```
