@@ -1,0 +1,73 @@
+---
+title: "Assignment_2"
+format: html
+editor: visual
+---
+
+```{r}
+library(tidyverse)
+library(rvest)  
+library(janitor) 
+library(lubridate) #loading all the pacages we need
+```
+
+```{r}
+url <- "https://www.motor.no/aktuelt/motors-store-vintertest-av-rekkevidde-pa-elbiler/217132" #getting the data with the url
+
+ df <- url %>% read_html() %>% 
+  html_element("table") %>%  
+  html_table()  #using read_html the get the data in a dataframe, then getting the table we want with html_element
+```
+
+```{r}
+df2 <- df[-1,] #removing the first row
+  
+df2 <- df2 %>% 
+  separate(X2, into= c("wttp", "KWH"), sep = "/") %>% 
+  separate(wttp, into = c("KM"), sep= " ") %>% 
+  separate(X3, into = c("stop_km"), sep = " ") #separate the variables into variables we can use in a plot
+
+df2[df2 == "x"] <- NA #transforming x into NA
+df2 <- df2 %>% drop_na() #removing NA
+df2$stop_km <- as.numeric(df2$stop_km) 
+df2$KM <- as.numeric(df2$KM) #converting some character rows into numeric
+
+
+
+```
+
+```{r}
+df2 %>% 
+  ggplot(aes(x = KM, y = stop_km)) + #making the plot
+  geom_point() +
+  geom_abline(intercept = 45, color = "red") + #adding the 45 degree line
+  xlim(200, 600) + 
+  ylim(200, 600) + #adding some limits on the axis
+  theme_bw() + #adding a nice theme
+  xlab("wtlp") +
+  ylab("Stop") +
+  ggtitle("Where cars stopped vs expected stop") #adding titles and labels
+
+```
+
+This plot shows how far the cars should have been able to go on the red line. The points below the line shows on what kilometer the cars stopped.
+
+```{r}
+df2 %>% 
+  ggplot(aes(x = KM, y = stop_km)) +
+  geom_point() +
+  geom_smooth(method = lm) + #making use of the lm function using geom_smooth 
+  geom_abline(intercept = 45, color ="red") +
+  theme_bw() +
+  xlab("wtlp") +
+  ylab("stop") +
+  ggtitle("Where cars stopped vs expected stop")
+
+
+  
+
+  
+  
+```
+
+The new line that comes with the lm function shows a line that looks like the average from all the data points.
