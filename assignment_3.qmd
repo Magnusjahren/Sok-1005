@@ -1,0 +1,75 @@
+---
+title: "Assignment_3"
+format: html
+editor: visual
+---
+
+```{r}
+rm (list = ls())
+library(tidyverse)
+library(jsonlite)
+library(ggrepel) #Loading packages
+
+```
+
+```{r}
+
+df <- fromJSON("https://static01.nyt.com/newsgraphics/2021/12/20/us-coronavirus-deaths-2021/ff0adde21623e111d8ce103fedecf7ffc7906264/scatter.json")
+#Getting the dataset from the website, then using the fromJSON function to get the dataframe
+
+
+df <- df %>% 
+  mutate(states = state.abb[match(name, state.name)]) #USing state.abb to get a column with all state abberations
+df[is.na(df)] <- "DC" #Replacing NA with DC
+
+
+df2 <- df %>% 
+  mutate(plotn = as.character(states)) #A copy of the states column
+```
+
+```{r}
+statenames <- c("AL","AR","CA","DE", "FL", "GA", "HI", "IL", "IN", "IA", "KS","ME", "MD", "MA", "MI", "MS", "MO", "MT", "NE","NH","NM", "NY","ND", "OH","PA","SC", "SD", "TN", "UT","VT","WA", "WV", "WI", "WY", "DC" ) #Making an array of the state labels we want in the plot
+
+
+
+df2 %>%
+  mutate(plotn = ifelse(plotn %in% statenames, plotn, "")) %>% #Putting only the statenames we want in the plotn column
+  ggplot(aes(x=fully_vaccinated_pct_of_pop, y=deaths_per_100k, label=plotn)) +#Setting the label of the points to only the statenames we want
+  geom_point(color="mediumseagreen") + 
+  geom_text(hjust=0, vjust=-0.7, size=2.5, color="azure4") + #Adding the text to each of datapoints and adjusting the position accordingly
+   scale_x_continuous(labels = scales::percent, breaks = c(0.45,0.50,0.55,0.60,0.65,0.70,0.75,0.80)) + #Changing the x scale to percent, and the breaks we want
+  theme_bw() + 
+  expand_limits(x = c(0.45,0.80)) + 
+  expand_limits(y = c(0,20)) + #Expanding the limits 
+  geom_segment(aes(x=0.57, y=18.5, xend=0.55, yend=19.8),arrow = arrow(length=unit(0.30,"cm"),type = "closed")) + 
+  geom_segment(aes(x=0.76, y=9.1, xend=0.78, yend=7.9),arrow = arrow(length=unit(0.30,"cm"),type = "closed")) + #Adding both of the arrows we need and adjusting the position
+  annotate("text",x=0.73, y=10, label="Higher vaccination rate,
+lower death rate", size = 2.5, fontface= 2 ) +
+  annotate("text",x=0.605, y=17.6, label="Lower vaccination rate,
+higher death rate", size = 2.5, fontface=2 ) + #Adding the text to plot
+  labs(x = "Share of total population fully vaccinated", y = "", subtitle = "20 avg. monthly deaths per 100.000", title = "Covid-19 deaths since universal adult vaccine eligibillity compared with
+                                        vaccination rates") #Adding all the labels we need
+```
+
+```{r, warning=FALSE}
+df2 %>%
+  mutate(plotn = ifelse(plotn %in% statenames, plotn, "")) %>% 
+  ggplot(aes(x=fully_vaccinated_pct_of_pop, y=deaths_per_100k, label=plotn)) +
+  geom_point(color="mediumseagreen") +
+  geom_text(hjust=0, vjust=-0.7, size=2.5, color="azure4") +
+   scale_x_continuous(labels = scales::percent, breaks = c(0.45,0.50,0.55,0.60,0.65,0.70,0.75,0.80)) +
+  theme_bw() +
+  expand_limits(x = c(0.45,0.80)) +
+  expand_limits(y = c(0,20)) +
+  geom_segment(aes(x=0.57, y=18.5, xend=0.55, yend=19.8),arrow = arrow(length=unit(0.30,"cm"),type = "closed")) +
+  geom_segment(aes(x=0.76, y=9.1, xend=0.78, yend=7.9),arrow = arrow(length=unit(0.30,"cm"),type = "closed")) +
+  annotate("text",x=0.73, y=10, label="Higher vaccination rate,
+lower death rate", size = 2.5, fontface= 2 ) +
+  annotate("text",x=0.605, y=17.6, label="Lower vaccination rate,
+higher death rate", size = 2.5, fontface=2 ) +
+  labs(x = "Share of total population fully vaccinated", y = "", subtitle = "20 avg. monthly deaths per 100.000", title = "Covid-19 deaths since universal adult vaccine eligibillity compared with
+                                        vaccination rates") +
+  geom_smooth(method = lm)
+```
+
+The lm line shows the average off the data points, we can see that the line gets lower when the vaccination rates gets higher.
