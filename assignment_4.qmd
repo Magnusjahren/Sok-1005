@@ -1,0 +1,142 @@
+---
+title: "assignment_4"
+format: html
+editor: visual
+---
+
+```{r}
+library(tidyverse)
+library(lubridate)
+library(stringr) #Loading packages
+
+```
+
+```{r}
+library(readr)
+df <- read_csv("https://raw.githubusercontent.com/uit-sok-1005-v23/uit-sok-1005-v23.github.io/main/storedata.csv")
+#Getting the data with read_csv
+```
+
+```{r}
+tbl_1 <- df %>%  
+  filter(Region %in% c("Region 1", "Region 9")) %>% #getting the regions we want with filter
+  separate(Order_Date, into = c("Year", "Month", "Day"), sep = "-") #Separating Date into year, month and day
+
+tbl_1 <- tbl_1 %>% 
+  filter(Year == 2017) %>% #the year we want
+  filter(Month %in% c("10", "11", "12")) %>% #getting the months we want
+  filter(Customer_Segment %in% c("Corporate", "Consumer")) #then the customer segment we need
+  
+  
+
+
+```
+
+```{r}
+tbl_1 <- tbl_1 %>% 
+  group_by(Month) %>% 
+  summarise(sum(Sales)) #The total sales of the months we want
+tbl_1
+```
+
+```{r}
+df2 <- df %>% 
+  separate(Order_Date, into = c("Year", "Month", "Day"), sep = "-") %>% 
+  filter(Region %in% c("Region 1", "Region 13")) %>% 
+  filter(Year %in% c(2015,2016,2017)) %>% 
+  group_by(Year,Month,Region) %>% 
+  summarise(sum(Sales)) 
+  
+df2 <- df2 %>% 
+  rename("Sales" = "sum(Sales)") #rename column
+
+df2 <- df2 %>% 
+  mutate("date" = make_date(year=Year, month = Month)) #Making a date variable with mutate
+  
+df2 %>%
+  ggplot(aes(x=date, y = Sales, color = Region)) +
+  geom_line() +
+   theme_bw() +
+  xlab("Year") #Plotting the results
+```
+
+```{r}
+tbl_2 <- df2 %>% 
+  pivot_wider(names_from = Region, values_from = Sales) #pivot the dataframe to a wide format using pivot_wider
+
+tbl_2$greater <- ifelse(tbl_2$`Region 1` > tbl_2$`Region 13`, 'A',
+                ifelse(tbl_2$`Region 1` < tbl_2$`Region 13`, 'B', 'C')) #Identify the columns which region 13 is greater then 1, B marks the months which it is greater and is stored in the greater column
+
+tbl_2 <- tbl_2[tbl_2$greater != "A", ] #removing all the rows which contains A, which is all the months which region 1 is greater then 13
+tbl_2
+```
+
+```{r, message=FALSE}
+tbl_3 <- df %>% 
+  separate(Order_Date, into = c("Year", "Month", "Day"), sep = "-") %>% 
+  filter(Year == 2017) %>% 
+  filter(Region %in% c("Region 1", "Region 2", "Region 4", "Region 6", "Region 7", "Region 9", "Region 10", "Region 11", "Region 12", "Region 13")) %>% #filter the regions we need
+  group_by(Customer_Segment, Product_Category) %>% #grouping the colomns we want
+  summarise(mean(Profit))#Then we get the average profit with summarise mean
+tbl_3
+```
+
+```{r, message=FALSE, error=FALSE}
+library(readr)
+XOM <- read_csv("XOM.csv")
+library(readr)
+fred <- read_csv("DCOILBRENTEU.csv")
+
+#downloading and getting the downloaded dataframes with read_csv
+```
+
+```{r, warning=FALSE}
+df3 <- XOM %>% 
+  separate(Date, into = c("Year", "Month", "Day"), sep = "-") %>% 
+  group_by(Year,Month) %>% 
+  summarise(mean(`Adj Close`)) %>% 
+  rename("exxon" = "mean(`Adj Close`)") %>% 
+  mutate("date" = make_date(year=Year, month = Month))
+
+```
+
+```{r, warning=FALSE}
+ fred$DCOILBRENTEU <- as.numeric(fred$DCOILBRENTEU) #Switching the column to numeric
+ 
+ fred <- fred %>% 
+   drop_na() #removing all NA values
+
+fred <- fred %>% 
+   separate(DATE, into = c("Year", "Month", "Day"), sep = "-") %>% 
+   group_by(Year, Month) %>% 
+  summarise(mean(DCOILBRENTEU)) %>% 
+  rename("oil" = "mean(DCOILBRENTEU)") %>% 
+  mutate("date" = make_date(year=Year, month = Month))
+```
+
+```{r}
+c_df <-merge(fred,df3, by="date", all = T)  #Merging the dataframes into a single one
+
+
+c_df %>% 
+  ggplot(aes(x=date)) + #plotting using date on x-axis
+  geom_line(aes(y=exxon, color="exxon")) + 
+  geom_line(aes(y=oil, color = "oil")) +#Exxom and oil on the y-axis
+  theme_bw() + #Chaning the theme
+  labs(x= "Date", y = "Trading average", title = "Trading prices of Oil and Exxon") + #Applying labels 
+  scale_color_manual(name = "Prices", values = c("red", "blue")) #Chaning the legend name and color 
+  
+```
+
+```{r}
+c_df %>% 
+  ggplot(aes(x=oil, y=exxon)) +
+  geom_line() +
+  theme_bw() +
+  labs(x= "Oil", y = "Exxon", title = "Exxom vs Oil") +
+  geom_smooth(method=lm) #Using the LM function to see relationship between Exxon and Oil
+  
+  
+```
+
+We can see that the exxon price gradually increases in relation to oil.
